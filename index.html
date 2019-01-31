@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+
+<style>
+ .links path {
+     opacity: 0.8;
+ }
+
+ .nodes text {
+     font-family: sans-serif;
+     font-size: 10pt !important;
+ }
+
+ .node-body {
+   fill: #bbb;
+   stroke: black;
+   stroke-width: 0.5px;
+ }
+
+ .thin-sankey .node line {
+   stroke: black;
+ }
+
+</style>
+
+<p>
+  <input type="radio" name="width" value="wide" checked>Wide</input>
+  <input type="radio" name="width" value="thin" >Thin</input>
+</p>
+
+<p>
+  <input type="checkbox" name="values" checked>Show node values</input>
+</p>
+
+<svg width="500" height="200"></svg>
+
+<script src="https://d3js.org/d3.v4.js"></script>
+<script src="js/d3-sankey-diagram.min.js"></script>
+<script>
+ // Data
+ var graph = {
+   nodes: [
+     {"id": "a", "title": "Source"},
+     {"id": "b", "title": "Stage 1"},
+     {"id": "c", "title": "Stage 2"},
+     {"id": "d", "title": "Output\nflow"},
+     {"id": "e", "title": "Losses"}
+   ],
+   links: [
+     {"source": "a", "target": "b", "type": "x", "values": [2.0, 1.5, 1.0, 0.5, 0.0]},
+     {"source": "b", "target": "c", "type": "x", "values": [1.5, 1.0, 0.5, 0.3, 0.0]},
+     {"source": "a", "target": "c", "type": "y", "values": [1, 1, 1, 1, 1]},
+     {"source": "a", "target": "c", "type": "z", "values": [2, 2, 2, 2, 2]},
+     {"source": "c", "target": "d", "type": "0", "values": [3.0, 2.5, 2.0, 1.7, 1.5]},
+     {"source": "b", "target": "e", "type": "1", "values": [0.5, 0.5, 0.5, 0.2, 0.0]},
+     {"source": "c", "target": "e", "type": "1", "values": [1.5, 1.5, 1.5, 1.5, 1.5]},
+     {"source": "a", "target": "e", "type": "1", "values": [0.5, 0.5, 0.5, 0.5, 0.5]}
+   ]
+ };
+
+ // Set up SVG
+ var svg = d3.select('svg');
+ var width = +svg.attr('width');
+ var height = +svg.attr('height');
+ var margin = { top: 10, left: 100, bottom: 10, right: 50 };
+
+ var i = -1;
+ var layout = d3.sankey()
+                .linkValue(function (d) { return d.values[i]; })
+                .nodeWidth(30)
+                .extent([
+                  [margin.left, margin.top],
+                  [width - margin.left - margin.right, height - margin.top - margin.bottom]]);
+
+ // Render
+ var color = d3.scaleOrdinal(d3.schemeCategory10);
+ var fmt = d3.format('.1f');
+ var diagram = d3.sankeyDiagram()
+                 .linkMinWidth(function(d) { return 0.1; })
+                 .nodeValue(nodeValue)
+                 .linkColor(function(d) { return color(d.type); });
+
+ update();
+ var timer = d3.interval(update, 1500);
+
+ function update() {
+   if (++i > 4) i = 0;
+   layout(graph);
+
+   svg
+     .datum(graph)
+     .transition().duration(1000).ease(d3.easeCubic)
+     .call(diagram);
+ }
+
+ d3.selectAll('[name="width"]').on('click', function(d) {
+   timer.stop();
+   if (d3.event.target.value == 'thin') {
+     layout.nodeWidth(0);
+     svg.classed('thin-sankey', true);
+   } else {
+     layout.nodeWidth(30);
+     svg.classed('thin-sankey', false);
+   }
+   --i;
+   update();
+   timer = d3.interval(update, 1500, d3.now() + 1500);
+ });
+
+ d3.selectAll('[name="values"]').on('click', function(d) {
+   if (d3.event.target.checked) {
+     diagram.nodeValue(nodeValue);
+   } else {
+     diagram.nodeValue(d => null);
+   }
+   --i;
+   update();
+ });
+
+ function nodeValue(d) {
+   return fmt(d.value) + ' t';
+ }
+</script>
